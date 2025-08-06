@@ -121,7 +121,7 @@ export function SecureAuthProvider({ children }: { children: ReactNode }) {
         email: sanitizedEmail.toLowerCase(),
         password: password,
       });
-      
+
       if (error) {
         setLoginAttempts(prev => prev + 1);
         console.error('❌ Secure sign in error:', error.message);
@@ -136,7 +136,14 @@ export function SecureAuthProvider({ children }: { children: ReactNode }) {
         }
         throw new Error('Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
       }
-      
+
+      if (data?.session) {
+        setSession(data.session);
+        setUser(data.session.user);
+        setLoginAttempts(0);
+        setIsLocked(false);
+      }
+
       // Reset rate limiter on successful login
       authRateLimiter.reset(rateLimitKey);
       
@@ -232,7 +239,11 @@ export function SecureAuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
+      setSession(null);
+      setUser(null);
+      setLoginAttempts(0);
+      setIsLocked(false);
+
       toast({
         title: "Erfolgreich abgemeldet",
         description: "Bis bald!",
