@@ -26,15 +26,19 @@ export const signInWithEmail = async (email: string, password: string) => {
       email: email.trim().toLowerCase(),
       password: password,
     });
-    
+
     if (error) {
       throw error;
     }
-    
-    return { data, error: null };
+
+    return {
+      user: data.user ?? null,
+      session: data.session ?? null,
+      error: null
+    };
   } catch (error) {
     console.error('Sign in error:', error);
-    return { data: null, error };
+    return { user: null, session: null, error };
   }
 };
 
