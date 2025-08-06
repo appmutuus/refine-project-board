@@ -106,9 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: email.trim().toLowerCase(),
         password: password,
       });
-      
+
       console.log('📞 Sign in response:', data, error);
-      
+
       if (error) {
         console.error('❌ Sign in error:', error);
         if (error.message.includes('Invalid login credentials')) {
@@ -120,7 +120,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         throw new Error('Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
       }
-      
+
+      if (data?.session) {
+        setSession(data.session);
+        setUser(data.session.user);
+      }
+
       toast({
         title: "Erfolgreich angemeldet",
         description: "Willkommen zurück!",
@@ -193,6 +198,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      setSession(null);
+      setUser(null);
       toast({
         title: "Erfolgreich abgemeldet",
         description: "Bis bald!",
