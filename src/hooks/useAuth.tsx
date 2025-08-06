@@ -32,15 +32,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (!mounted) return;
 
-        // Only update state for significant events to prevent loops
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        // Only update state when we have a session or the user explicitly signed out.
+        if (session) {
           setSession(session);
-          setUser(session?.user ?? null);
-          
-          // Create/update profile only on sign in, not on token refresh
-          if (event === 'SIGNED_IN' && session?.user) {
+          setUser(session.user);
+
+          // Create/update profile only on sign in
+          if (event === 'SIGNED_IN') {
             console.log('✅ User signed in:', session.user.email);
-            
+
             // Use setTimeout to prevent blocking auth flow
             setTimeout(() => {
               supabase
@@ -61,10 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 });
             }, 100);
           }
-
-          if (event === 'SIGNED_OUT') {
-            console.log('🚪 User signed out');
-          }
+        } else if (event === 'SIGNED_OUT') {
+          // Explicit sign out
+          console.log('🚪 User signed out');
+          setSession(null);
+          setUser(null);
         }
 
         setLoading(false);
