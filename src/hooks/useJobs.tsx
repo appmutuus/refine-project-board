@@ -257,6 +257,62 @@ export function useJobs() {
     }
   };
 
+  const fetchApplicationsForJob = async (jobId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('job_applications')
+        .select('*')
+        .eq('job_id', jobId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as JobApplication[];
+    } catch (error) {
+      console.error('Error fetching job applications:', error);
+      return [] as JobApplication[];
+    }
+  };
+
+  const acceptApplication = async (jobId: string, applicationId: string, applicantId: string) => {
+    try {
+      if (!user) throw new Error('Not authenticated');
+
+      const { error: jobError } = await supabase
+        .from('jobs')
+        .update({ assigned_to: applicantId, status: 'in_progress' })
+        .eq('id', jobId)
+        .eq('creator_id', user.id);
+      if (jobError) throw jobError;
+
+      const { error: appError } = await supabase
+        .from('job_applications')
+        .update({ status: 'accepted' })
+        .eq('id', applicationId)
+        .eq('job_id', jobId);
+      if (appError) throw appError;
+
+      await supabase
+        .from('job_applications')
+        .update({ status: 'rejected' })
+        .eq('job_id', jobId)
+        .neq('id', applicationId);
+
+      await fetchMyJobs();
+
+      toast({
+        title: 'Bewerber akzeptiert',
+        description: 'Der Job wurde zugewiesen und gestartet.',
+      });
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Fehler',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   const updateJobStatus = async (jobId: string, status: string, assignedTo?: string) => {
     try {
       if (!user) throw new Error('Not authenticated');
@@ -290,7 +346,7 @@ export function useJobs() {
       return false;
     }
   };
-
+}
   return {
     jobs,
     myJobs,
@@ -298,9 +354,10 @@ export function useJobs() {
     loading,
     createJob,
     applyForJob,
+    acceptApplication,
     updateJobStatus,
     fetchJobs,
     fetchMyJobs,
     fetchApplications,
+    fetchApplicationsForJob,
   };
-}
