@@ -4,6 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 
+// Cache for jobs data
+let jobsCache: { jobs: Job[]; timestamp: number } | null = null;
+let myJobsCache: { [userId: string]: { jobs: Job[]; timestamp: number } } = {};
+const CACHE_DURATION = 30000; // 30 seconds
+
 interface Job {
   id: string;
   creator_id: string;
@@ -67,11 +72,23 @@ export function useJobs() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    // Debounce the fetch calls to prevent rapid requests
+    const debouncedFetch = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
     fetchJobs();
     if (user) {
       fetchMyJobs();
       fetchApplications();
     }
+      }, 100);
+    };
+
+    debouncedFetch();
+
+    return () => clearTimeout(timeoutId);
   }, [user]);
 
   // Helper function to transform database job to our Job interface
@@ -99,6 +116,12 @@ export function useJobs() {
 
   const fetchJobs = async () => {
     try {
+      // Check cache first
+      if (jobsCache && (Date.now() - jobsCache.timestamp) < CACHE_DURATION) {
+        setJobs(jobsCache.jobs);
+        setLoading(false);
+        return;
+      }
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
@@ -109,6 +132,8 @@ export function useJobs() {
       
       const transformedJobs = (data || []).map(transformDatabaseJob);
       setJobs(transformedJobs);
+      // Update cache
+      jobsCache = { jobs: transformedJobs, timestamp: Date.now() };
     } catch (error: any) {
       console.error('Error fetching jobs:', error);
     } finally {
@@ -120,6 +145,12 @@ export function useJobs() {
     try {
       if (!user) return;
 
+      // Check cache first
+      const cached = myJobsCache[user.id];
+      if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+        setMyJobs(cached.jobs);
+        return;
+      }
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
@@ -130,6 +161,8 @@ export function useJobs() {
       
       const transformedJobs = (data || []).map(transformDatabaseJob);
       setMyJobs(transformedJobs);
+      // Update cache
+      myJobsCache[user.id] = { jobs: transformedJobs, timestamp: Date.now() };
     } catch (error: any) {
       console.error('Error fetching my jobs:', error);
     }

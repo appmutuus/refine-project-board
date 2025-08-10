@@ -3,6 +3,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
+// Cache for profile data
+let profileCache: { [userId: string]: { profile: Profile; timestamp: number } } = {};
+const CACHE_DURATION = 60000; // 1 minute
+
 interface Profile {
   id: string;
   first_name: string | null;
@@ -38,6 +42,13 @@ export function useProfile() {
     try {
       if (!user) return;
 
+      // Check cache first
+      const cached = profileCache[user.id];
+      if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+        setProfile(cached.profile);
+        setLoading(false);
+        return;
+      }
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -48,6 +59,8 @@ export function useProfile() {
       
       if (data) {
         setProfile(data);
+        // Update cache
+        profileCache[user.id] = { profile: data, timestamp: Date.now() };
       } else {
         // Create profile if it doesn't exist
         const newProfile = {
@@ -65,6 +78,8 @@ export function useProfile() {
 
         if (createError) throw createError;
         setProfile(createdProfile);
+        // Update cache
+        profileCache[user.id] = { profile: createdProfile, timestamp: Date.now() };
       }
     } catch (error: any) {
       console.error('Error fetching profile:', error);
@@ -89,6 +104,8 @@ export function useProfile() {
 
       if (error) throw error;
       setProfile(data);
+      // Update cache
+      profileCache[user.id] = { profile: data, timestamp: Date.now() };
       return data;
     } catch (error: any) {
       console.error('Error updating profile:', error);

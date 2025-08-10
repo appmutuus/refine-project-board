@@ -21,6 +21,14 @@ const Dashboard = () => {
   const { jobs, myJobs } = useJobs();
   const { userStats } = useKarma();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // Prevent multiple renders while data is loading
+  useEffect(() => {
+    if (user && profile && jobs.length >= 0 && myJobs.length >= 0) {
+      setDataLoaded(true);
+    }
+  }, [user, profile, jobs, myJobs]);
 
   const handleCreateProject = (projectData: any) => {
     console.log('Creating project:', projectData);
@@ -49,6 +57,14 @@ const Dashboard = () => {
     });
   };
 
+  // Show loading state while data is being fetched
+  if (!dataLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white text-xl">Laden...</div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gray-900">
       <DashboardHeader />

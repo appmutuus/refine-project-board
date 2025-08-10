@@ -3,6 +3,10 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+// Cache for session data to prevent excessive requests
+let sessionCache: { session: Session | null; timestamp: number } | null = null;
+const CACHE_DURATION = 30000; // 30 seconds
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -24,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    let authStateChangeTimeout: NodeJS.Timeout;
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -32,6 +37,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (!mounted) return;
 
+        // Debounce auth state changes to prevent rapid updates
+            // Update cache
+            sessionCache = { session, timestamp: Date.now() };
+        clearTimeout(authStateChangeTimeout);
+        authStateChangeTimeout = setTimeout(() => {
         // Only update state when we have a session or the user explicitly signed out.
         if (session) {
           setSession(session);
@@ -53,13 +63,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   updated_at: new Date().toISOString(),
                 }, {
                   onConflict: 'id'
-                })
+              }, 500); // Increased delay to reduce rapid requests
                 .then(({ error }) => {
                   if (error) {
                     console.error('Profile upsert error:', error);
                   }
                 });
             }, 100);
+            sessionCache = null;
           }
         } else if (event === 'SIGNED_OUT') {
           // Explicit sign out
@@ -69,24 +80,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setLoading(false);
+        }, 100); // Debounce auth state changes
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
+    const checkSession = async () => {
       if (mounted) {
-        console.log('🔄 Initial session check:', session?.user?.email || 'No session');
-        if (error) {
-          console.error('Session check error:', error);
+        // Use cached session if available and not expired
+        if (sessionCache && (Date.now() - sessionCache.timestamp) < CACHE_DURATION) {
+          console.log('🔄 Using cached session');
+          setSession(sessionCache.session);
+          setUser(sessionCache.session?.user ?? null);
+          setLoading(false);
+          return;
         }
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          console.log('🔄 Initial session check:', session?.user?.email || 'No session');
+          if (error) {
+            console.error('Session check error:', error);
+          }
+          setSession(session);
+          setUser(session?.user ?? null);
+          // Update cache
+          sessionCache = { session, timestamp: Date.now() };
+        } catch (error) {
+          console.error('Session check failed:', error);
+        } finally {
+          setLoading(false);
+        }
       }
-    });
+    };
+
+    checkSession();
 
     return () => {
       mounted = false;
+      clearTimeout(authStateChangeTimeout);
       subscription.unsubscribe();
     };
   }, []);
