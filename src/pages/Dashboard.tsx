@@ -212,6 +212,13 @@ const Dashboard = () => {
                 >
                   Profil bearbeiten
                 </Button>
+                <Button 
+                  onClick={() => window.location.href = '/admin'} 
+                  variant="outline" 
+                  className="w-full btn-futuristic hover-lift"
+                >
+                  Admin Panel
+                </Button>
               </div>
             </CardContent>
           </Card>

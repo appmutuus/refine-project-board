@@ -341,7 +341,7 @@ export const AdminCRM = () => {
                       <span className="font-semibold">Premium Nutzer</span>
                       <Badge>1,234 Nutzer</Badge>
                     </div>
-                    <p className="text-sm text-gray-500">LTV > €200, Aktiv > 90 Tage</p>
+                    <p className="text-sm text-gray-500">LTV &gt; €200, Aktiv &gt; 90 Tage</p>
                   </div>
                   
                   <div className="p-3 border rounded-lg">
@@ -349,7 +349,7 @@ export const AdminCRM = () => {
                       <span className="font-semibold">At-Risk Nutzer</span>
                       <Badge variant="destructive">567 Nutzer</Badge>
                     </div>
-                    <p className="text-sm text-gray-500">Keine Aktivität > 30 Tage</p>
+                    <p className="text-sm text-gray-500">Keine Aktivität &gt; 30 Tage</p>
                   </div>
                   
                   <div className="p-3 border rounded-lg">
@@ -357,7 +357,7 @@ export const AdminCRM = () => {
                       <span className="font-semibold">Neue Nutzer</span>
                       <Badge variant="secondary">2,890 Nutzer</Badge>
                     </div>
-                    <p className="text-sm text-gray-500">Registriert < 7 Tage</p>
+                    <p className="text-sm text-gray-500">Registriert &lt; 7 Tage</p>
                   </div>
                 </div>
                 
