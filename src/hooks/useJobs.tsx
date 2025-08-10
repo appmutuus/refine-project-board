@@ -346,7 +346,7 @@ export function useJobs() {
       return false;
     }
   };
-}
+
   return {
     jobs,
     myJobs,
@@ -361,3 +361,4 @@ export function useJobs() {
     fetchApplications,
     fetchApplicationsForJob,
   };
+}
