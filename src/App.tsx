@@ -20,6 +20,7 @@ import Missions from "./pages/Missions";
 import Ranking from "./pages/Ranking";
 import Tutorial from "./pages/Tutorial";
 import TutorialLesson from "./pages/TutorialLesson";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,11 @@ const App = () => (
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin" element={
+                <ProtectedRoute>
+                  <AdminDashboard />
                 </ProtectedRoute>
               } />
               <Route path="/map" element={
