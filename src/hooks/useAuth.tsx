@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
         }
 
-          setLoading(false);
+        setLoading(false);
         }, 100); // Debounce auth state changes
       }
     );

@@ -1,25 +1,21 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { jobSchema, sanitizeInput } from '@/lib/validation';
-import { z } from 'zod';
 
 interface Job {
   id: string;
   creator_id: string;
   title: string;
   description: string;
-  category: string;
   job_type: 'good_deeds' | 'kein_bock';
   budget?: number;
   karma_reward?: number;
+  category: string;
   location: string;
   latitude?: number;
   longitude?: number;
   status: string;
-  assigned_to?: string;
   estimated_duration?: number;
   due_date?: string;
   images?: string[];
@@ -35,29 +31,23 @@ interface JobApplication {
   message: string;
   status: string;
   created_at: string;
+  profiles?: {
+    first_name?: string;
+    last_name?: string;
+    rating?: number;
+  };
 }
 
-type DatabaseJob = {
+interface JobTicket {
   id: string;
-  creator_id: string;
-  title: string;
-  description: string | null;
-  category: string;
-  job_type: string;
-  budget?: number | null;
-  karma_reward?: number | null;
-  location: string;
-  latitude?: number | null;
-  longitude?: number | null;
-  status: string | null;
-  assigned_to?: string | null;
-  estimated_duration?: number | null;
-  due_date?: string | null;
-  images?: string[] | null;
-  requirements?: string[] | null;
-  created_at: string | null;
-  updated_at: string | null;
-};
+  job_id: string;
+  applicant_id: string;
+  status: string;
+  payment_released: boolean;
+  karma_awarded: boolean;
+  completed_at?: string;
+  created_at: string;
+}
 
 export function useSecureJobs() {
   const { user } = useAuth();
@@ -65,38 +55,19 @@ export function useSecureJobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [myJobs, setMyJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [tickets, setTickets] = useState<JobTicket[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchJobs();
     if (user) {
+      fetchJobs();
       fetchMyJobs();
       fetchApplications();
+      fetchTickets();
+    } else {
+      setLoading(false);
     }
   }, [user]);
-
-  // Helper function to transform and sanitize database job to our Job interface
-  const transformDatabaseJob = (dbJob: DatabaseJob): Job => ({
-    id: dbJob.id,
-    creator_id: dbJob.creator_id,
-    title: sanitizeInput(dbJob.title),
-    description: sanitizeInput(dbJob.description || ''),
-    category: sanitizeInput(dbJob.category),
-    job_type: (dbJob.job_type === 'good_deeds' || dbJob.job_type === 'kein_bock') ? dbJob.job_type : 'good_deeds',
-    budget: dbJob.budget || undefined,
-    karma_reward: dbJob.karma_reward || undefined,
-    location: sanitizeInput(dbJob.location),
-    latitude: dbJob.latitude || undefined,
-    longitude: dbJob.longitude || undefined,
-    status: dbJob.status || 'open',
-    assigned_to: dbJob.assigned_to || undefined,
-    estimated_duration: dbJob.estimated_duration || undefined,
-    due_date: dbJob.due_date || undefined,
-    images: dbJob.images || undefined,
-    requirements: dbJob.requirements?.map(req => sanitizeInput(req)) || undefined,
-    created_at: dbJob.created_at || new Date().toISOString(),
-    updated_at: dbJob.updated_at || new Date().toISOString(),
-  });
 
   const fetchJobs = async () => {
     try {
@@ -104,211 +75,303 @@ export function useSecureJobs() {
         .from('jobs')
         .select('*')
         .eq('status', 'open')
-        .order('created_at', { ascending: false })
-        .limit(100); // Limit results to prevent excessive data transfer
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      const transformedJobs = (data || []).map(transformDatabaseJob);
-      setJobs(transformedJobs);
-    } catch (error: any) {
+      setJobs((data || []) as Job[]);
+    } catch (error) {
       console.error('Error fetching jobs:', error);
       toast({
         title: "Fehler",
         description: "Jobs konnten nicht geladen werden.",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchMyJobs = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('creator_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setMyJobs((data || []) as Job[]);
+    } catch (error) {
+      console.error('Error fetching my jobs:', error);
+    }
+  };
+
+  const fetchApplications = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('job_applications')
+        .select('*')
+        .eq('applicant_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setApplications((data || []) as JobApplication[]);
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+    }
+  };
+
+  const fetchTickets = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('job_tickets')
+        .select('*')
+        .eq('applicant_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTickets(data || []);
+    } catch (error) {
+      console.error('Error fetching tickets:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchMyJobs = async () => {
-    try {
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('creator_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      
-      const transformedJobs = (data || []).map(transformDatabaseJob);
-      setMyJobs(transformedJobs);
-    } catch (error: any) {
-      console.error('Error fetching my jobs:', error);
+  const createJob = async (jobData: Omit<Job, 'id' | 'creator_id' | 'created_at' | 'updated_at' | 'status'>) => {
+    if (!user) {
       toast({
         title: "Fehler",
-        description: "Ihre Jobs konnten nicht geladen werden.",
+        description: "Sie müssen angemeldet sein, um einen Job zu erstellen.",
         variant: "destructive",
       });
+      return;
     }
-  };
 
-  const fetchApplications = async () => {
     try {
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('job_applications')
-        .select('*')
-        .eq('applicant_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      setApplications(data || []);
-    } catch (error: any) {
-      console.error('Error fetching applications:', error);
-    }
-  };
-
-  const createJob = async (jobData: Partial<Job>) => {
-    try {
-      if (!user) throw new Error('Not authenticated');
-
-      // Validate and sanitize input
-      const validatedData = jobSchema.parse(jobData);
-
-      const insertData = {
-        creator_id: user.id,
-        title: sanitizeInput(validatedData.title),
-        description: validatedData.description ? sanitizeInput(validatedData.description) : null,
-        category: sanitizeInput(validatedData.category),
-        job_type: validatedData.job_type,
-        budget: validatedData.budget || null,
-        karma_reward: validatedData.karma_reward || null,
-        location: sanitizeInput(validatedData.location),
-        latitude: jobData.latitude || null,
-        longitude: jobData.longitude || null,
-        estimated_duration: validatedData.estimated_duration || null,
-        due_date: validatedData.due_date || null,
-        images: jobData.images || null,
-        requirements: validatedData.requirements?.map(req => sanitizeInput(req)) || null,
-      };
-
       const { data, error } = await supabase
         .from('jobs')
-        .insert(insertData)
+        .insert([{
+          ...jobData,
+          creator_id: user.id,
+        }])
         .select()
         .single();
 
       if (error) throw error;
-
-      // Log activity
-      await supabase
-        .from('activity_log')
-        .insert({
-          user_id: user.id,
-          action: 'job_created',
-          description: `Job "${sanitizeInput(validatedData.title)}" erstellt`,
-          metadata: { job_id: data.id },
-        });
-
-      await fetchJobs();
-      await fetchMyJobs();
 
       toast({
         title: "Job erstellt",
         description: "Ihr Job wurde erfolgreich veröffentlicht!",
       });
 
-      return transformDatabaseJob(data);
+      await fetchJobs();
+      await fetchMyJobs();
+      return data;
     } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        const firstError = error.errors[0];
-        toast({
-          title: "Validation Error",
-          description: firstError.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Fehler",
-          description: "Job konnte nicht erstellt werden.",
-          variant: "destructive",
-        });
-      }
+      console.error('Error creating job:', error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Job konnte nicht erstellt werden.",
+        variant: "destructive",
+      });
       throw error;
     }
   };
 
   const applyForJob = async (jobId: string, message: string = '') => {
+    if (!user) {
+      toast({
+        title: "Fehler", 
+        description: "Sie müssen angemeldet sein, um sich zu bewerben.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     try {
-      if (!user) throw new Error('Not authenticated');
-
-      // Sanitize message
-      const sanitizedMessage = sanitizeInput(message);
-
       const { error } = await supabase
         .from('job_applications')
-        .insert({
+        .insert([{
           job_id: jobId,
           applicant_id: user.id,
-          message: sanitizedMessage,
-        });
+          message,
+        }]);
 
-      if (error) throw error;
-
-      // Log activity
-      await supabase
-        .from('activity_log')
-        .insert({
-          user_id: user.id,
-          action: 'job_applied',
-          description: `Auf Job beworben`,
-          metadata: { job_id: jobId },
-        });
-
-      await fetchApplications();
+      if (error) {
+        if (error.code === '23505') { // Unique constraint violation
+          toast({
+            title: "Bereits beworben",
+            description: "Sie haben sich bereits für diesen Job beworben.",
+            variant: "destructive",
+          });
+          return false;
+        }
+        throw error;
+      }
 
       toast({
         title: "Bewerbung gesendet",
         description: "Ihre Bewerbung wurde erfolgreich eingereicht!",
       });
 
+      await fetchApplications();
       return true;
     } catch (error: any) {
+      console.error('Error applying for job:', error);
       toast({
         title: "Fehler",
-        description: "Bewerbung konnte nicht gesendet werden.",
+        description: error.message || "Bewerbung konnte nicht gesendet werden.",
         variant: "destructive",
       });
       return false;
     }
   };
 
-  const updateJobStatus = async (jobId: string, status: string, assignedTo?: string) => {
+  const fetchApplicationsForJob = async (jobId: string): Promise<JobApplication[]> => {
     try {
-      if (!user) throw new Error('Not authenticated');
+      const { data, error } = await supabase
+        .from('job_applications')
+        .select('*')
+        .eq('job_id', jobId)
+        .order('created_at', { ascending: false });
 
-      const updateData: any = { status: sanitizeInput(status) };
-      if (assignedTo) updateData.assigned_to = assignedTo;
+      if (error) throw error;
+      return (data || []) as JobApplication[];
+    } catch (error) {
+      console.error('Error fetching job applications:', error);
+      return [];
+    }
+  };
 
-      const { error } = await supabase
+  const acceptApplication = async (jobId: string, applicationId: string, applicantId: string) => {
+    if (!user) return false;
+
+    try {
+      // Start transaction by updating job status and creating ticket
+      const { error: jobError } = await supabase
         .from('jobs')
-        .update(updateData)
+        .update({ 
+          status: 'in_progress',
+          updated_at: new Date().toISOString()
+        })
         .eq('id', jobId)
         .eq('creator_id', user.id);
 
-      if (error) throw error;
+      if (jobError) throw jobError;
 
-      await fetchJobs();
-      await fetchMyJobs();
+      // Accept the application
+      const { error: appError } = await supabase
+        .from('job_applications')
+        .update({ status: 'accepted' })
+        .eq('id', applicationId);
+
+      if (appError) throw appError;
+
+      // Reject other applications
+      const { error: rejectError } = await supabase
+        .from('job_applications')
+        .update({ status: 'rejected' })
+        .eq('job_id', jobId)
+        .neq('id', applicationId);
+
+      if (rejectError) throw rejectError;
+
+      // Create job ticket
+      const { error: ticketError } = await supabase
+        .from('job_tickets')
+        .insert([{
+          job_id: jobId,
+          applicant_id: applicantId,
+          status: 'active'
+        }]);
+
+      if (ticketError) throw ticketError;
 
       toast({
-        title: "Job aktualisiert",
-        description: "Der Job-Status wurde erfolgreich geändert.",
+        title: "Bewerber akzeptiert",
+        description: "Der Job wurde zugewiesen und ein Ticket erstellt.",
+      });
+
+      await fetchMyJobs();
+      return true;
+    } catch (error: any) {
+      console.error('Error accepting application:', error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Bewerbung konnte nicht akzeptiert werden.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const completeJob = async (ticketId: string) => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('job_tickets')
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', ticketId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Job abgeschlossen",
+        description: "Der Job wurde als abgeschlossen markiert.",
+      });
+
+      await fetchTickets();
+      return true;
+    } catch (error: any) {
+      console.error('Error completing job:', error);
+      toast({
+        title: "Fehler", 
+        description: error.message || "Job konnte nicht abgeschlossen werden.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const submitRating = async (jobId: string, ratedUserId: string, score: number, comment: string = '') => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('ratings')
+        .insert([{
+          job_id: jobId,
+          rater_id: user.id,
+          rated_id: ratedUserId,
+          score,
+          comment
+        }]);
+
+      if (error) throw error;
+
+      // Update user's average rating
+      await supabase.rpc('update_user_rating', { user_id: ratedUserId });
+
+      toast({
+        title: "Bewertung abgegeben",
+        description: "Ihre Bewertung wurde gespeichert.",
       });
 
       return true;
     } catch (error: any) {
+      console.error('Error submitting rating:', error);
       toast({
         title: "Fehler",
-        description: "Job-Status konnte nicht aktualisiert werden.",
+        description: error.message || "Bewertung konnte nicht gespeichert werden.",
         variant: "destructive",
       });
       return false;
@@ -319,12 +382,19 @@ export function useSecureJobs() {
     jobs,
     myJobs,
     applications,
+    tickets,
     loading,
     createJob,
     applyForJob,
-    updateJobStatus,
-    fetchJobs,
-    fetchMyJobs,
-    fetchApplications,
+    fetchApplicationsForJob,
+    acceptApplication,
+    completeJob,
+    submitRating,
+    refetch: () => {
+      fetchJobs();
+      fetchMyJobs();
+      fetchApplications();
+      fetchTickets();
+    }
   };
 }

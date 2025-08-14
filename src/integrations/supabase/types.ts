@@ -139,6 +139,47 @@ export type Database = {
           },
         ]
       }
+      job_tickets: {
+        Row: {
+          applicant_id: string
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          job_id: string
+          karma_awarded: boolean | null
+          payment_released: boolean | null
+          status: string | null
+        }
+        Insert: {
+          applicant_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          job_id: string
+          karma_awarded?: boolean | null
+          payment_released?: boolean | null
+          status?: string | null
+        }
+        Update: {
+          applicant_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string
+          karma_awarded?: boolean | null
+          payment_released?: boolean | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_tickets_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           assigned_to: string | null
@@ -372,6 +413,41 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          job_id: string
+          status: string | null
+          stripe_payment_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          job_id: string
+          status?: string | null
+          stripe_payment_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          job_id?: string
+          status?: string | null
+          stripe_payment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -388,7 +464,9 @@ export type Database = {
           location: string | null
           phone: string | null
           rank: Database["public"]["Enums"]["user_rank"] | null
+          rating: number | null
           streak_days: number | null
+          stripe_customer_id: string | null
           total_earned: number | null
           updated_at: string | null
         }
@@ -407,7 +485,9 @@ export type Database = {
           location?: string | null
           phone?: string | null
           rank?: Database["public"]["Enums"]["user_rank"] | null
+          rating?: number | null
           streak_days?: number | null
+          stripe_customer_id?: string | null
           total_earned?: number | null
           updated_at?: string | null
         }
@@ -426,11 +506,51 @@ export type Database = {
           location?: string | null
           phone?: string | null
           rank?: Database["public"]["Enums"]["user_rank"] | null
+          rating?: number | null
           streak_days?: number | null
+          stripe_customer_id?: string | null
           total_earned?: number | null
           updated_at?: string | null
         }
         Relationships: []
+      }
+      ratings: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          id: string
+          job_id: string
+          rated_id: string
+          rater_id: string
+          score: number
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          job_id: string
+          rated_id: string
+          rater_id: string
+          score: number
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string
+          rated_id?: string
+          rater_id?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       referrals: {
         Row: {
@@ -674,6 +794,33 @@ export type Database = {
         }
         Relationships: []
       }
+      verifications: {
+        Row: {
+          created_at: string | null
+          document_type: string
+          document_url: string
+          status: string | null
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_type: string
+          document_url: string
+          status?: string | null
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_type?: string
+          document_url?: string
+          status?: string | null
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -788,6 +935,10 @@ export type Database = {
           budget: number
           karma_reward: number
         }[]
+      }
+      update_user_rating: {
+        Args: { user_id: string }
+        Returns: undefined
       }
       update_user_streak: {
         Args: { user_id: string }
