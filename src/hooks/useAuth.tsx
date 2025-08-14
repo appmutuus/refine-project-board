@@ -38,10 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return;
 
         // Debounce auth state changes to prevent rapid updates
-            // Update cache
-            sessionCache = { session, timestamp: Date.now() };
         clearTimeout(authStateChangeTimeout);
         authStateChangeTimeout = setTimeout(() => {
+          // Update cache
+          sessionCache = { session, timestamp: Date.now() };
         // Only update state when we have a session or the user explicitly signed out.
         if (session) {
           setSession(session);
@@ -61,16 +61,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   last_name: session.user.user_metadata?.last_name || null,
                   avatar_url: session.user.user_metadata?.avatar_url || null,
                   updated_at: new Date().toISOString(),
-                }, {
-                  onConflict: 'id'
-              }, 500); // Increased delay to reduce rapid requests
-                .then(({ error }) => {
-                  if (error) {
-                    console.error('Profile upsert error:', error);
-                  }
-                });
-            }, 100);
-            sessionCache = null;
+                 }, {
+                   onConflict: 'id'
+                 })
+                 .then(({ error }) => {
+                   if (error) {
+                     console.error('Profile upsert error:', error);
+                   }
+                 });
+            }, 500); // Increased delay to reduce rapid requests
           }
         } else if (event === 'SIGNED_OUT') {
           // Explicit sign out
@@ -79,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
         }
 
-        setLoading(false);
+          setLoading(false);
         }, 100); // Debounce auth state changes
       }
     );
