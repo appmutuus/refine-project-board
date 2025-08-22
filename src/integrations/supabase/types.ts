@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -302,6 +302,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      leads: {
+        Row: {
+          age_group: string | null
+          city: string | null
+          created_at: string | null
+          email: string
+          first_name: string
+          id: string
+          interest: string | null
+          last_name: string
+          message: string | null
+          newsletter_consent: boolean | null
+          phone: string | null
+          postal_code: string | null
+          privacy_consent: boolean | null
+          source: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          age_group?: string | null
+          city?: string | null
+          created_at?: string | null
+          email: string
+          first_name: string
+          id?: string
+          interest?: string | null
+          last_name: string
+          message?: string | null
+          newsletter_consent?: boolean | null
+          phone?: string | null
+          postal_code?: string | null
+          privacy_consent?: boolean | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          age_group?: string | null
+          city?: string | null
+          created_at?: string | null
+          email?: string
+          first_name?: string
+          id?: string
+          interest?: string | null
+          last_name?: string
+          message?: string | null
+          newsletter_consent?: boolean | null
+          phone?: string | null
+          postal_code?: string | null
+          privacy_consent?: boolean | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       messages: {
         Row: {
@@ -828,12 +885,12 @@ export type Database = {
     Functions: {
       award_karma: {
         Args: {
-          user_id: string
-          points: number
-          reason: string
           job_id?: string
           mission_id?: string
+          points: number
+          reason: string
           transaction_type?: string
+          user_id: string
         }
         Returns: boolean
       }
@@ -846,28 +903,28 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_rank"]
       }
       can_access_job: {
-        Args: { user_id: string; job_id: string }
+        Args: { job_id: string; user_id: string }
         Returns: boolean
       }
       complete_mission: {
-        Args: { user_id: string; mission_id: string; photo_url?: string }
+        Args: { mission_id: string; photo_url?: string; user_id: string }
         Returns: Json
       }
       create_job_with_error_handling: {
         Args: {
-          p_title: string
-          p_description: string
-          p_category: string
-          p_job_type: string
           p_budget: number
-          p_karma_reward: number
-          p_location: string
-          p_latitude?: number
-          p_longitude?: number
-          p_estimated_duration?: number
+          p_category: string
+          p_description: string
           p_due_date?: string
+          p_estimated_duration?: number
           p_images?: string[]
+          p_job_type: string
+          p_karma_reward: number
+          p_latitude?: number
+          p_location: string
+          p_longitude?: number
           p_requirements?: string[]
+          p_title: string
         }
         Returns: Json
       }
@@ -875,29 +932,29 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           index_name: string
-          table_name: string
-          index_size: string
           index_scans: number
+          index_size: string
+          table_name: string
         }[]
       }
       get_table_sizes: {
         Args: Record<PropertyKey, never>
         Returns: {
+          index_size: string
+          row_count: number
           table_name: string
           table_size: string
-          index_size: string
           total_size: string
-          row_count: number
         }[]
       }
       handle_error: {
         Args:
           | {
               error_code: string
-              error_message?: string
+              error_context?: string
               error_detail?: string
               error_hint?: string
-              error_context?: string
+              error_message?: string
             }
           | { error_message: string }
         Returns: undefined
@@ -914,26 +971,30 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      run_sql: {
+        Args: { input_sql: string }
+        Returns: Record<string, unknown>[]
+      }
       search_jobs_secure: {
         Args: {
-          search_term: string
           category_filter?: string
           location_filter?: string
-          status_filter?: string
           page_number?: number
           page_size?: number
+          search_term: string
+          status_filter?: string
         }
         Returns: {
-          id: string
-          title: string
-          description: string
+          budget: number
           category: string
-          location: string
-          status: string
           created_at: string
           creator_id: string
-          budget: number
+          description: string
+          id: string
           karma_reward: number
+          location: string
+          status: string
+          title: string
         }[]
       }
       update_user_rating: {
